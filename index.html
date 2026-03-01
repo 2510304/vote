@@ -106,7 +106,7 @@
 
     function updateBadge() {
         const badge = document.getElementById('status-badge');
-        badge.innerText = state.isLocked ? "투표 종료" : "투표 진행 중";
+        badge.innerText = state.isLocked ? "투표 종료" : "그 투표 멈춰뒀다가 실행하고 싶었는데 그 코딩을 할 줄 몰라서 시작때까지 기다려주세요~ ";
         badge.className = `badge ${state.isLocked ? 'badge-closed' : 'badge-open'}`;
         document.getElementById('lock-btn').innerText = state.isLocked ? "투표 다시 시작하기" : "투표 종료하기";
     }
@@ -238,3 +238,4 @@
 </body>
 
 </html>
+
