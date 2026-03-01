@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>실팸 제2회 부방장 선거 - </title>
+    <title>실팸 제2회 부방장 선거  </title>
     <script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-database-compat.js"></script>
     <style>
@@ -39,7 +39,7 @@
 <body>
 
 <div class="container">
-    <h1>👑 아직 투표 시간이 아닙니다!</h1>
+    <h1>👑 실팸 제2회 부방장 선거</h1>
 
     <div id="admin-zone" class="card">
         <h2 style="color:var(--main)">🛠️ 방장 관리 패널</h2>
@@ -106,7 +106,7 @@
 
     function updateBadge() {
         const badge = document.getElementById('status-badge');
-        badge.innerText = state.isLocked ? "투표 종료" : "그 투표 멈춰뒀다가 실행하고 싶었는데 그 코딩을 할 줄 몰라서 시작때까지 기다려주세요~ ";
+        badge.innerText = state.isLocked ? "투표 종료" : "투표 진행 중 ";
         badge.className = `badge ${state.isLocked ? 'badge-closed' : 'badge-open'}`;
         document.getElementById('lock-btn').innerText = state.isLocked ? "투표 다시 시작하기" : "투표 종료하기";
     }
@@ -238,4 +238,5 @@
 </body>
 
 </html>
+
 
