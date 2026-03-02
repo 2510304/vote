@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <title>실팸 선거 관리자 패널</title>
+    <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-database-compat.js"></script>
+    <style>
+        body { font-family: sans-serif; padding: 20px; background: #f0f2f5; line-height: 1.6; }
+        .card { background: white; padding: 20px; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); margin-bottom: 20px; }
+        h2, h3 { color: #333; border-bottom: 2px solid #007bff; padding-bottom: 10px; }
+        input, button, textarea { width: 100%; padding: 10px; margin: 5px 0; border-radius: 5px; border: 1px solid #ddd; box-sizing: border-box; }
+        button { background: #007bff; color: white; border: none; cursor: pointer; font-weight: bold; }
+        button.delete { background: #ff4d4d; }
+        table { width: 100%; border-collapse: collapse; margin-top: 15px; font-size: 14px; }
+        th, td { border: 1px solid #ddd; padding: 10px; text-align: left; }
+        th { background: #f8f9fa; }
+        .bad { background-color: #ffebee; color: #d32f2f; } /* 중복 IP 강조 */
+    </style>
+</head>
+<body>
+
+    <div class="card">
+        <h3>👤 후보자 등록/관리</h3>
+        <input type="text" id="candName" placeholder="후보자 이름">
+        <textarea id="candPromise" placeholder="공약 내용"></textarea>
+        <button onclick="addCandidate()">후보 등록하기</button>
+        <div id="candidateListView" style="margin-top: 10px;"></div>
+    </div>
+
+    <div class="card">
+        <h3>📋 투표 권한 명단 업데이트</h3>
+        <textarea id="voterListInput" placeholder="이름1, 이름2, 이름3... (쉼표로 구분)"></textarea>
+        <button onclick="updateVoterList()" style="background: #28a745;">명단 업데이트</button>
+    </div>
+
+    <div class="card">
+        <h3>📊 실시간 투표 현황 (IP 모니터링)</h3>
+        <div id="summary" style="font-weight: bold; margin-bottom: 10px;">데이터 로딩 중...</div>
+        <table>
+            <thead>
+                <tr>
+                    <th>닉네임</th>
+                    <th>선택</th>
+                    <th>IP 주소</th>
+                    <th>상태</th>
+                </tr>
+            </thead>
+            <tbody id="list"></tbody>
+        </table>
+        <button onclick="resetVotes()" class="delete" style="margin-top: 20px;">⚠️ 투표 내역 전체 초기화</button>
+    </div>
+
+    <script>
+        const firebaseConfig = { databaseURL: "https://silfam-election-default-rtdb.firebaseio.com/" };
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.database();
+
+        // [기능 1] 후보자 등록
+        function addCandidate() {
+            const name = document.getElementById('candName').value;
+            const promise = document.getElementById('candPromise').value;
+            if(!name) return alert("이름을 입력하세요");
+            db.ref('candidates/' + name).set({ promise: promise });
+            alert("후보 등록 완료!");
+        }
+
+        // [기능 2] 명단 업데이트
+        function updateVoterList() {
+            const raw = document.getElementById('voterListInput').value;
+            const list = raw.split(',').map(n => n.trim()).filter(n => n);
+            db.ref('allowedVoters').set(list);
+            alert("명단이 업데이트 되었습니다!");
+        }
+
+        // [기능 3] 투표 초기화
+        function resetVotes() {
+            if(confirm("정말로 모든 투표 내역을 지울까요?")) {
+                db.ref('votes').remove();
+                alert("초기화 되었습니다.");
+            }
+        }
+
+        // [실시간 데이터 표시]
+        db.ref().on('value', (snapshot) => {
+            const data = snapshot.val() || {};
+            
+            // 후보자 목록 표시
+            const candView = document.getElementById('candidateListView');
+            candView.innerHTML = '<strong>현재 후보:</strong> ' + (data.candidates ? Object.keys(data.candidates).join(', ') : '없음');
+
+            // 투표 로그 및 IP 체크
+            const listBody = document.getElementById('list');
+            listBody.innerHTML = '';
+            const votes = data.votes ? Object.entries(data.votes) : [];
+            const ipMap = {};
+
+            votes.forEach(([name, info]) => { if(info.ip) ipMap[info.ip] = (ipMap[info.ip] || 0) + 1; });
+            votes.forEach(([name, info]) => {
+                const isDup = ipMap[info.ip] > 1;
+                listBody.innerHTML += `<tr class="${isDup ? 'bad' : ''}">
+                    <td>${name}</td>
+                    <td>${info.candidate}</td>
+                    <td>${info.ip || '-'}</td>
+                    <td>${isDup ? '⚠️ 중복의심' : '정상'}</td>
+                </tr>`;
+            });
+            document.getElementById('summary').innerText = `총 투표 수: ${votes.length}표`;
+        });
+    </script>
+</body>
+</html>
