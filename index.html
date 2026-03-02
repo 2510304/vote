@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <title>실팸 제2회 부방장 선거</title>
+    <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-database-compat.js"></script>
+    <style>
+        body { font-family: 'Pretendard', sans-serif; background: #f4f7f9; text-align: center; padding: 20px; }
+        .container { max-width: 500px; margin: auto; background: white; padding: 30px; border-radius: 15px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
+        .candidate-item { text-align: left; background: #f8f9fa; margin: 10px 0; padding: 15px; border-radius: 10px; border: 1px solid #eee; cursor: pointer; }
+        .candidate-item:hover { background: #e9ecef; }
+        .candidate-item input { margin-right: 10px; width: auto; }
+        .promise { font-size: 0.85em; color: #666; margin-top: 5px; padding-left: 25px; }
+        input[type="text"], button { width: 100%; padding: 12px; margin: 10px 0; border-radius: 8px; border: 1px solid #ddd; box-sizing: border-box; }
+        button { background: #007bff; color: white; border: none; cursor: pointer; font-weight: bold; font-size: 1.1em; }
+        .admin-link { margin-top: 50px; font-size: 12px; color: #ccc; cursor: pointer; text-decoration: none; display: block; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h2>🗳️ 제2회 부방장 선거</h2>
+    <p>닉네임을 입력하고 후보를 선택해주세요.</p>
+    
+    <input type="text" id="voterName" placeholder="실팸 닉네임 입력">
+    
+    <div id="candidateList" style="margin: 20px 0;">
+        <p style="color: #999;">후보자 목록을 불러오는 중...</p>
+    </div>
+
+    <button onclick="submitVote()">투표 제출하기</button>
+</div>
+
+<a class="admin-link" href="admin.html">Admin Management</a>
+
+<script>
+    const firebaseConfig = { databaseURL: "https://silfam-election-default-rtdb.firebaseio.com/" };
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.database();
+
+    // [핵심] Firebase에서 후보자 목록을 실시간으로 가져와서 화면에 뿌림
+    db.ref('candidates').on('value', (snapshot) => {
+        const candidates = snapshot.val();
+        const listDiv = document.getElementById('candidateList');
+        listDiv.innerHTML = '';
+
+        if (candidates) {
+            Object.values(candidates).forEach(c => {
+                listDiv.innerHTML += `
+                    <div class="candidate-item" onclick="document.getElementById('${c.name}').checked = true">
+                        <label>
+                            <input type="radio" name="candidate" id="${c.name}" value="${c.name}">
+                            <strong>${c.name}</strong>
+                        </label>
+                        <div class="promise">${c.promise || '공약 없음'}</div>
+                    </div>
+                `;
+            });
+        } else {
+            listDiv.innerHTML = '<p style="color:red;">등록된 후보자가 없습니다. 관리자에게 문의하세요.</p>';
+        }
+    });
+
+    async function getUserIP() {
+        try {
+            const res = await fetch('https://api.ipify.org?format=json');
+            const data = await res.json();
+            return data.ip;
+        } catch (e) { return "unknown"; }
+    }
+
+    async function submitVote() {
+        const name = document.getElementById('voterName').value.trim();
+        const selected = document.querySelector('input[name="candidate"]:checked');
+        
+        if (!name) return alert("닉네임을 입력하세요.");
+        if (!selected) return alert("후보를 선택하세요.");
+
+        // 명단 확인 로직 (옵션)
+        const snapshot = await db.ref('allowedVoters').once('value');
+        const allowed = snapshot.val() || [];
+        if (!allowed.includes(name)) return alert("투표 권한이 없는 닉네임입니다.");
+
+        const userIP = await getUserIP();
+        
+        db.ref('votes/' + name).set({
+            candidate: selected.value,
+            ip: userIP,
+            time: new Date().toLocaleString()
+        }).then(() => {
+            alert("투표 완료! 감사합니다.");
+            location.reload();
+        });
+    }
+</script>
+</body>
+</html>
